@@ -12,7 +12,7 @@ void print_list(slist_t *list) {
 
 int main(int argc, char **argv) {
   slist_t *list1 =
-      slist_cons("This", s_cons("is", s_cons("a", s_cons("list", NULL))));
+      slist_cons("This", slist_cons("is", slist_cons("a", slist_cons("list", NULL))));
 
   printf("List 1:\n");
   print_list(list1);

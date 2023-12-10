@@ -13,7 +13,8 @@ void write_to_file(int inode, const char *buf, size_t size, off_t offset);
 // Initialize the storage system.
 void storage_init(const char *path) {
     // Initialize the blocks system with the disk image file path.
-    blocks_init(path);
+	printf("Debug: Initializing storage with path: %s\n", path);
+    	blocks_init(path);
 
     // Additional initialization steps can be added here if needed.
     // For example, initializing inodes or directories if required.
@@ -128,33 +129,41 @@ int storage_truncate(const char *path, off_t size) {
 
 // Create a new file or directory.
 int storage_mknod(const char *path, int mode) {
-    // Find the parent directory's inode.
+    printf("Debug: storage_mknod called with path: %s, mode: %o\n", path, mode);
+    
     char parent_path[256];
     extract_parent_path(path, parent_path);
     int parent_inum = inode_path_lookup(parent_path);
+    printf("Debug: Parent inode number: %d\n", parent_inum);
+
     if (parent_inum < 0) {
-        return -1; // Parent directory not found.
+        printf("Debug: Parent directory not found\n");
+        return -1;
     }
 
     inode_t *parent_inode = get_inode(parent_inum);
     if (!parent_inode) {
-        return -1; // Parent inode not found.
+        printf("Debug: Parent inode not found\n");
+        return -1;
     }
 
-    // Allocate a new inode for the file.
     int inum = alloc_inode(mode);
+    printf("Debug: Allocated inode number: %d\n", inum);
+
     if (inum < 0) {
-        return -1; // Failed to allocate inode.
+        printf("Debug: Failed to allocate inode\n");
+        return -1;
     }
 
-    // Add an entry to the parent directory.
     const char *name = get_filename_from_path(path);
     if (directory_put(parent_inode, name, inum) < 0) {
+        printf("Debug: Failed to add entry to directory\n");
         free_inode(inum);
-        return -1; // Failed to add entry to directory.
+        return -1;
     }
 
-    return 0; // Success.
+    printf("Debug: storage_mknod completed successfully\n");
+    return 0;
 }
 
 // Remove a file.

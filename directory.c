@@ -38,20 +38,24 @@ int directory_lookup(inode_t *dd, const char *name) {
 }
 
 int directory_put(inode_t *dd, const char *name, int inum) {
+    printf("Debug: directory_put called with name: %s, inum: %d\n", name, inum);
+
     int new_size = dd->size + sizeof(dirent_t);
     if (grow_inode(dd, sizeof(dirent_t)) == -1) {
+        printf("Debug: Failed to grow inode\n");
         return -1;
     }
 
     dirent_t *directory = (dirent_t *)blocks_get_block(dd->block);
     dirent_t *new_entry = &directory[dd->size / sizeof(dirent_t)];
-    memset(new_entry->name, 0, DIR_NAME_LENGTH);
     strncpy(new_entry->name, name, DIR_NAME_LENGTH);
     new_entry->inum = inum;
     dd->size = new_size;
 
+    printf("Debug: directory_put completed successfully\n");
     return 0;
 }
+
 
 int directory_delete(inode_t *dd, const char *name) {
     dirent_t *directory = (dirent_t *)blocks_get_block(dd->block);

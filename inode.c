@@ -13,28 +13,34 @@ inode_t* get_inode(int inum) {
 }
 
 int alloc_inode(int mode) {
-	void* ibm = get_inode_bitmap();
+    printf("Debug: alloc_inode called with mode: %o\n", mode);
 
-	for (int ii = 1; ii < INODE_COUNT; ++ii) {
-		if (!bitmap_get(ibm, ii)) {
-			bitmap_put(ibm, ii, 1);
-			printf("+ alloc_inode() -> %d\n", ii);
+    void* ibm = get_inode_bitmap();
+    for (int ii = 1; ii < INODE_COUNT; ++ii) {
+        if (!bitmap_get(ibm, ii)) {
+            bitmap_put(ibm, ii, 1);
+            printf("Debug: alloc_inode allocated inode number: %d\n", ii);
 
-			inode_t* new_inode = get_inode(ii);
-			new_inode->refs = 1;
-			new_inode->mode = mode;
-			new_inode->size = 0;
-			new_inode->block = alloc_block(); // Allocating a block for the inode
-			if (new_inode->block == -1) {
-				bitmap_put(ibm, ii, 0); // Freeing up the inode bitmap if block allocation fails
-				return -1;
-			}
-			return ii;
-		}
-	}
+            inode_t* new_inode = get_inode(ii);
+            new_inode->refs = 1;
+            new_inode->mode = mode;
+            new_inode->size = 0;
+            new_inode->block = alloc_block();
+            printf("Debug: Block allocated for inode: %d\n", new_inode->block);
 
-	return -1;
+            if (new_inode->block == -1) {
+                printf("Debug: Block allocation failed, freeing inode bitmap\n");
+                bitmap_put(ibm, ii, 0);
+                return -1;
+            }
+            return ii;
+        }
+    }
+
+    printf("Debug: No inode could be allocated\n");
+    return -1;
 }
+
 
 void free_inode(int inum) {
 	printf("+ free_inode(%d)\n", inum);
