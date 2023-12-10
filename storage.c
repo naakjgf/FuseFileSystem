@@ -5,6 +5,11 @@
 #include "blocks.h"
 #include "util.h"
 
+// functions from inode
+int inode_path_lookup(const char *path);
+void read_from_file(int inode, char *buf, size_t size, off_t offset);
+void write_to_file(int inode, const char *buf, size_t size, off_t offset);
+
 // Initialize the storage system.
 void storage_init(const char *path) {
     // Initialize the blocks system with the disk image file path.
@@ -52,8 +57,13 @@ int storage_read(const char *path, char *buf, size_t size, off_t offset) {
         return -1; // Inode not found.
     }
 
+    // Adjust size if it exceeds the file size from the offset.
+    if (offset + size > inode->size) {
+        size = inode->size - offset;
+    }
+
     // Read data into buffer.
-    read_from_file(inode, buf, size, offset);
+    read_from_file(inum, buf, size, offset);
 
     return size; // Number of bytes read.
 }
@@ -80,7 +90,7 @@ int storage_write(const char *path, const char *buf, size_t size, off_t offset) 
     }
 
     // Write data from buffer to file.
-    write_to_file(inode, buf, size, offset);
+    write_to_file(inum, buf, size, offset);
 
     return size; // Number of bytes written.
 }
@@ -143,52 +153,6 @@ int storage_mknod(const char *path, int mode) {
         free_inode(inum);
         return -1; // Failed to add entry to directory.
     }
-
-    return 0; // Success.
-}
-
-// Read data from a file.
-int storage_read(const char *path, char *buf, size_t size, off_t offset) {
-    // Find the inode for the given path.
-    int inum = inode_path_lookup(path);
-    if (inum < 0) {
-        return -1; // File not found.
-    }
-
-    inode_t *inode = get_inode(inum);
-    if (!inode) {
-        return -1; // Inode not found.
-    }
-
-    // Adjust size if it exceeds the file size from the offset.
-    if (offset + size > inode->size) {
-        size = inode->size - offset;
-    }
-
-    // Read data into buffer.
-    read_from_file(inode, buf, size, offset);
-
-    return size; // Number of bytes read.
-}
-
-// Get file status.
-int storage_stat(const char *path, struct stat *st) {
-    int inum = inode_path_lookup(path);
-    if (inum < 0) {
-        return -1; // File not found.
-    }
-
-    inode_t *inode = get_inode(inum);
-    if (!inode) {
-        return -1; // Inode not found.
-    }
-
-    // Populate the stat structure.
-    st->st_mode = inode->mode;
-    st->st_size = inode->size;
-    st->st_nlink = inode->refs;
-    st->st_uid = getuid(); // Can be modified to reflect actual user.
-    st->st_gid = getgid(); // Can be modified to reflect actual group.
 
     return 0; // Success.
 }

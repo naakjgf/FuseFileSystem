@@ -1,14 +1,15 @@
 #include "inode.h"
 #include "blocks.h"
 #include "bitmap.h"
+#include <string.h>
 
 // The main inode.c implementations
 
 const int INODE_COUNT = 256;
 
-inode* get_inode(int inum) {
+inode_t* get_inode(int inum) {
 	void* inodes = blocks_get_block(1); // Assuming inode list is stored in block 1
-	return (inode*)(inodes + (sizeof(inode) * inum));
+	return (inode_t*)(inodes + (sizeof(inode_t) * inum));
 }
 
 int alloc_inode(int mode) {
@@ -19,7 +20,7 @@ int alloc_inode(int mode) {
 			bitmap_put(ibm, ii, 1);
 			printf("+ alloc_inode() -> %d\n", ii);
 
-			inode* new_inode = get_inode(ii);
+			inode_t* new_inode = get_inode(ii);
 			new_inode->refs = 1;
 			new_inode->mode = mode;
 			new_inode->size = 0;
@@ -40,18 +41,18 @@ void free_inode(int inum) {
 	void* ibm = get_inode_bitmap();
 	bitmap_put(ibm, inum, 0);
 
-	inode* node = get_inode(inum);
+	inode_t* node = get_inode(inum);
 	free_block(node->block); // Freeing the block associated with the inode
 	node->block = 0;
 }
 
-int grow_inode(inode* node, int size) {
+int grow_inode(inode_t* node, int size) {
 	// Assuming size increase doesn't require new block allocation
 	node->size += size;
 	return node->size; 
 }
 
-int shrink_inode(inode* node, int size) {
+int shrink_inode(inode_t* node, int size) {
 	// Reducing size without affecting the block
 	if (node->size > size) {
 		node->size -= size;
@@ -59,12 +60,12 @@ int shrink_inode(inode* node, int size) {
 	return node->size;
 }
 
-void write_to_file(inode* node, const char *buf, size_t size, off_t offset) {
+void write_to_file(inode_t* node, const char *buf, size_t size, off_t offset) {
 	void* block = blocks_get_block(node->block);
 	memcpy(block + offset, buf, size);
 }
 
-void read_from_file(inode* node, char *buf, size_t size, off_t offset) {
+void read_from_file(inode_t* node, char *buf, size_t size, off_t offset) {
 	void* block = blocks_get_block(node->block);
 	memcpy(buf, block + offset, size);
 }
