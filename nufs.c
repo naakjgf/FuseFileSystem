@@ -47,7 +47,7 @@ int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
         filler(buf, it->data, NULL, 0);
     }
 
-    s_free(names);
+    slist_free(names);
     return 0;
 }
 

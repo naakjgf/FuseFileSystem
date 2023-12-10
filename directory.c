@@ -12,7 +12,7 @@ int inode_path_lookup(const char* path) {
         return 0; // Root directory assumed to be at inode 0
     }
 
-    slist_t* dir_list = s_explode(path, '/');
+    slist_t* dir_list = slist_explode(path, '/');
     slist_t* list_start = dir_list;
 
     int inum = 0; // Start from root inode
@@ -22,7 +22,7 @@ int inode_path_lookup(const char* path) {
         dir_list = dir_list->next;
     }
 
-    s_free(list_start);
+    slist_free(list_start);
     return inum;
 }
 
@@ -30,7 +30,7 @@ int directory_lookup(inode_t *dd, const char *name) {
     dirent_t *directory = (dirent_t *)blocks_get_block(dd->block);
     for (int ii = 0; ii < dd->size / sizeof(dirent_t); ++ii) {
         dirent_t *entry = &directory[ii];
-        if (streq(entry->name, name)) {
+        if (strreq(entry->name, name)) {
             return entry->inum;
         }
     }
@@ -59,7 +59,7 @@ int directory_delete(inode_t *dd, const char *name) {
 
     for (int ii = 0; ii < entries; ++ii) {
         dirent_t *entry = &directory[ii];
-        if (streq(entry->name, name)) {
+        if (strreq(entry->name, name)) {
             for (int jj = ii; jj < entries - 1; ++jj) {
                 directory[jj] = directory[jj + 1];
             }
@@ -72,7 +72,7 @@ int directory_delete(inode_t *dd, const char *name) {
 }
 
 slist_t* directory_list(const char* path) {
-    return s_explode(path, '/');
+    return slist_explode(path, '/');
 }
 
 void print_directory(inode_t *dd) {
@@ -80,6 +80,6 @@ void print_directory(inode_t *dd) {
     for (slist_t *it = list; it != NULL; it = it->next) {
         printf("%s\n", it->data);
     }
-    s_free(list);
+    slist_free(list);
 }
 
