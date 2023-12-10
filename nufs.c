@@ -10,98 +10,71 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "storage.h"
+
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
 // implementation for: man 2 access
 // Checks if a file exists.
 int nufs_access(const char *path, int mask) {
-  int rv = 0;
-
-  // Only the root directory and our simulated file are accessible for now...
-  if (strcmp(path, "/") == 0 || strcmp(path, "/hello.txt") == 0) {
-    rv = 0;
-  } else { // ...others do not exist
-    rv = -ENOENT;
-  }
-
-  printf("access(%s, %04o) -> %d\n", path, mask, rv);
-  return rv;
+    struct stat st;
+    int res = storage_stat(path, &st);
+    return (res == 0) ? 0 : -ENOENT;
 }
 
 // Gets an object's attributes (type, permissions, size, etc).
-// Implementation for: man 2 stat
-// This is a crucial function.
 int nufs_getattr(const char *path, struct stat *st) {
-  int rv = 0;
-
-  // Return some metadata for the root directory...
-  if (strcmp(path, "/") == 0) {
-    st->st_mode = 040755; // directory
-    st->st_size = 0;
-    st->st_uid = getuid();
-  }
-  // ...and the simulated file...
-  else if (strcmp(path, "/hello.txt") == 0) {
-    st->st_mode = 0100644; // regular file
-    st->st_size = 6;
-    st->st_uid = getuid();
-  } else { // ...other files do not exist on this filesystem
-    rv = -ENOENT;
-  }
-  printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode,
-         st->st_size);
-  return rv;
+    int res = storage_stat(path, st);
+    if (res != 0) {
+        return -ENOENT;
+    }
+    return 0;
 }
 
-// implementation for: man 2 readdir
-// lists the contents of a directory
-int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-                 off_t offset, struct fuse_file_info *fi) {
-  struct stat st;
-  int rv;
+// Lists the contents of a directory
+int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+    struct stat st;
+    if (nufs_getattr(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        return -ENOENT;
+    }
 
-  rv = nufs_getattr("/", &st);
-  assert(rv == 0);
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
 
-  filler(buf, ".", &st, 0);
+    slist_t *names = storage_list(path);
+    for (slist_t *it = names; it != NULL; it = it->next) {
+        filler(buf, it->data, NULL, 0);
+    }
 
-  rv = nufs_getattr("/hello.txt", &st);
-  assert(rv == 0);
-  filler(buf, "hello.txt", &st, 0);
-
-  printf("readdir(%s) -> %d\n", path, rv);
-  return 0;
+    s_free(names);
+    return 0;
 }
 
 // mknod makes a filesystem object like a file or directory
 // called for: man 2 open, man 2 link
 // Note, for this assignment, you can alternatively implement the create
 // function.
+// Create a file node
 int nufs_mknod(const char *path, mode_t mode, dev_t rdev) {
-  int rv = -1;
-  printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
-  return rv;
+    return storage_mknod(path, mode);
 }
 
 // most of the following callbacks implement
 // another system call; see section 2 of the manual
+// Create a directory
 int nufs_mkdir(const char *path, mode_t mode) {
-  int rv = nufs_mknod(path, mode | 040000, 0);
-  printf("mkdir(%s) -> %d\n", path, rv);
-  return rv;
+    return storage_mknod(path, mode | S_IFDIR);
 }
 
+// Remove a file
 int nufs_unlink(const char *path) {
-  int rv = -1;
-  printf("unlink(%s) -> %d\n", path, rv);
-  return rv;
+    return storage_unlink(path);
 }
 
+// Create a hard link
 int nufs_link(const char *from, const char *to) {
-  int rv = -1;
-  printf("link(%s => %s) -> %d\n", from, to, rv);
-  return rv;
+    return storage_link(from, to);
 }
 
 int nufs_rmdir(const char *path) {
@@ -110,59 +83,42 @@ int nufs_rmdir(const char *path) {
   return rv;
 }
 
-// implements: man 2 rename
-// called to move a file within the same filesystem
+// Rename a file
 int nufs_rename(const char *from, const char *to) {
-  int rv = -1;
-  printf("rename(%s => %s) -> %d\n", from, to, rv);
-  return rv;
+    return storage_rename(from, to);
 }
 
+// Change permissions.
 int nufs_chmod(const char *path, mode_t mode) {
-  int rv = -1;
-  printf("chmod(%s, %04o) -> %d\n", path, mode, rv);
-  return rv;
+    return -ENOSYS; // Didn't implement
 }
 
+// Change file size
 int nufs_truncate(const char *path, off_t size) {
-  int rv = -1;
-  printf("truncate(%s, %ld bytes) -> %d\n", path, size, rv);
-  return rv;
+    return storage_truncate(path, size);
 }
 
 // This is called on open, but doesn't need to do much
 // since FUSE doesn't assume you maintain state for
 // open files.
-// You can just check whether the file is accessible.
+// You can just check whether the file is accessible. The File open operation
 int nufs_open(const char *path, struct fuse_file_info *fi) {
-  int rv = 0;
-  printf("open(%s) -> %d\n", path, rv);
-  return rv;
+    return 0; // Nothing done.
 }
 
-// Actually read data
-int nufs_read(const char *path, char *buf, size_t size, off_t offset,
-              struct fuse_file_info *fi) {
-  int rv = 6;
-  strcpy(buf, "hello\n");
-  printf("read(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
-  return rv;
+// Read data from a file
+int nufs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+    return storage_read(path, buf, size, offset);
 }
 
-// Actually write data
-int nufs_write(const char *path, const char *buf, size_t size, off_t offset,
-               struct fuse_file_info *fi) {
-  int rv = -1;
-  printf("write(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
-  return rv;
+// Write data to a file
+int nufs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+    return storage_write(path, buf, size, offset);
 }
 
-// Update the timestamps on a file or directory.
+// Set file access and modification times
 int nufs_utimens(const char *path, const struct timespec ts[2]) {
-  int rv = -1;
-  printf("utimens(%s, [%ld, %ld; %ld %ld]) -> %d\n", path, ts[0].tv_sec,
-         ts[0].tv_nsec, ts[1].tv_sec, ts[1].tv_nsec, rv);
-  return rv;
+    return storage_set_time(path, ts);
 }
 
 // Extended operations
