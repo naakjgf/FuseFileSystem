@@ -1,3 +1,5 @@
+#include <string.h>
+
 // Extracts the parent path from a given file path.
 void extract_parent_path(const char* path, char* parent_path) {
     strcpy(parent_path, path);

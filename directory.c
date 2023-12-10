@@ -30,7 +30,7 @@ int directory_lookup(inode_t *dd, const char *name) {
     dirent_t *directory = (dirent_t *)blocks_get_block(dd->block);
     for (int ii = 0; ii < dd->size / sizeof(dirent_t); ++ii) {
         dirent_t *entry = &directory[ii];
-        if (strreq(entry->name, name)) {
+        if (strcmp(entry->name, name) == 0) {
             return entry->inum;
         }
     }
@@ -59,7 +59,7 @@ int directory_delete(inode_t *dd, const char *name) {
 
     for (int ii = 0; ii < entries; ++ii) {
         dirent_t *entry = &directory[ii];
-        if (strreq(entry->name, name)) {
+        if (strcmp(entry->name, name) == 0) {
             for (int jj = ii; jj < entries - 1; ++jj) {
                 directory[jj] = directory[jj + 1];
             }

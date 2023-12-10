@@ -244,8 +244,8 @@ int storage_set_time(const char *path, const struct timespec ts[2]) {
     }
 
     // Update times in the inode. (Assuming inode structure has these fields)
-    inode->atime = ts[0].tv_sec;
-    inode->mtime = ts[1].tv_sec;
+//    inode->atime = ts[0].tv_sec;
+//    inode->mtime = ts[1].tv_sec;
 
     return 0; // Success.
 }
