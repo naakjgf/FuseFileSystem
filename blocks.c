@@ -1,9 +1,10 @@
-/**
+**
  * @file blocks.c
  * @author CS3650 staff
  *
  * Implementatino of a block-based abstraction over a disk image file.
- */
+ *
+*/
 #define _GNU_SOURCE
 #include <string.h>
 
@@ -16,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stddef.h>
 
 #include "bitmap.h"
 #include "blocks.h"

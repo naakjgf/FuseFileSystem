@@ -57,9 +57,7 @@ int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 // function.
 // Create a file node
 int nufs_mknod(const char *path, mode_t mode, dev_t rdev) {
-	printf("Debug: nufs_mknod called with path: %s, mode: %o\n", path, mode);
 	int result = storage_mknod(path, mode);
-	printf("Debug: nufs_mknod storage_mknod returned %d\n", result);
 	return result;
 	//	return storage_mknod(path, mode);
 }
@@ -157,28 +155,19 @@ void nufs_init_ops(struct fuse_operations *ops) {
 struct fuse_operations nufs_ops;
 
 int main(int argc, char *argv[]) {
-    printf("Debug: Starting nufs main\n");
-
     // Check for the correct number of arguments
     if (argc < 3) {
         printf("Usage: %s [FUSE options] <mount point> <filesystem data file>\n", argv[0]);
         return 1;
     }
-
     // Extract the filesystem data file path
     char* fs_data_file = argv[argc-1];
-
     // Remove the data file argument from the argument list
     argc--;
-
     // Initialize the storage with the data file
-    printf("Debug: Initializing storage with path: %s\n", fs_data_file);
     storage_init(fs_data_file);
-
     // Initialize FUSE operations
     nufs_init_ops(&nufs_ops);
-
     // Pass the remaining arguments to fuse_main
-    printf("Debug: Calling fuse_main\n");
     return fuse_main(argc, argv, &nufs_ops, NULL);
 }
